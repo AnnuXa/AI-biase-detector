@@ -15,12 +15,18 @@ import io
 import os
 import sys
 
+# Get the project root directory
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 # Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, PROJECT_ROOT)
 
 from gemini import explain_all_bias
 
-app = Flask(__name__)
+# Create Flask app with explicit template and static folders
+app = Flask(__name__, 
+            template_folder=os.path.join(PROJECT_ROOT, "templates"),
+            static_folder=os.path.join(PROJECT_ROOT, "static"))
 app.secret_key = os.environ.get("SECRET_KEY", "bias_secret_key")
 UPLOAD_FOLDER = "/tmp/uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
