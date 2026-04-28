@@ -1,0 +1,7 @@
+flask
+pandas
+numpy
+scipy
+reportlab
+google-generativeai
+python-dotenv
