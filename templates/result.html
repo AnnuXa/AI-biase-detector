@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Bias Detection Results</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="dashboard-body">
+
+  <!-- Top Navigation Bar -->
+  <div class="dash-navbar">
+    <div class="dash-brand">⚖️ AI Bias Detector</div>
+    <div class="dash-filters">
+      <select class="dash-select" id="columnFilter" onchange="filterColumn(this.value)">
+        <option value="all">📊 All Columns</option>
+        {% for col in results.keys() %}
+        <option value="{{ col }}">{{ col }}</option>
+        {% endfor %}
+      </select>
+      <select class="dash-select" id="biasFilter" onchange="filterBias(this.value)">
+        <option value="all">🎯 All Bias Levels</option>
+        <option value="high">⚠️ High Bias</option>
+        <option value="moderate">⚡ Moderate Bias</option>
+        <option value="balanced">✅ Balanced</option>
+      </select>
+      <span class="dash-domain-tag">
+        {% if domain == 'hiring' %}💼 Hiring
+        {% elif domain == 'finance' %}🏦 Finance
+        {% else %}🏥 Healthcare{% endif %}
+      </span>
+    </div>
+    <a href="/" class="dash-back">← New Analysis</a>
+  </div>
+
+  <!-- Main Dashboard Layout -->
+  <div class="dash-layout">
+
+    <!-- LEFT PANEL -->
+    <div class="dash-left">
+
+      <!-- Health Score + Stats Row -->
+      <div class="dash-stats-row">
+        <div class="stat-card stat-health {% if overall.health_score >= 70 %}stat-good{% elif overall.health_score >= 40 %}stat-moderate{% else %}stat-bad{% endif %}">
+          <div class="stat-number">{{ overall.health_score }}</div>
+          <div class="stat-label">Health Score</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number stat-red">{{ overall.high }}</div>
+          <div class="stat-label">High Bias</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number stat-yellow">{{ overall.moderate }}</div>
+          <div class="stat-label">Moderate</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number stat-green">{{ overall.balanced }}</div>
+          <div class="stat-label">Balanced</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number stat-purple">{{ overall.total }}</div>
+          <div class="stat-label">Total Analyzed</div>
+        </div>
+      </div>
+
+      <!-- Overview Chart -->
+      <div class="dash-chart-card">
+        <div class="chart-card-header">
+          <span class="chart-title">📊 Bias Score Overview</span>
+          <div class="chart-toggle">
+            <button class="ctoggle active" onclick="switchOverview('bar', this)">Bar</button>
+            <button class="ctoggle" onclick="switchOverview('radar', this)">Radar</button>
+          </div>
+        </div>
+        <canvas id="overviewChart" height="120"></canvas>
+      </div>
+
+      <!-- Distribution Charts Grid -->
+      <div class="dash-chart-title">📈 Distribution Charts</div>
+      <div class="dash-charts-grid" id="chartsGrid">
+        {% for col, data in results.items() %}
+        <div class="mini-chart-card" data-col="{{ col }}" data-bias="{{ 'high' if '⚠️' in data.label else 'moderate' if '⚡' in data.label else 'balanced' }}">
+          <div class="mini-chart-header">
+            <span class="mini-col-name">{{ col }}</span>
+            <span class="mini-badge {% if '⚠️' in data.label %}badge-high{% elif '⚡' in data.label %}badge-moderate{% else %}badge-low{% endif %}">
+              {{ data.label }}
+            </span>
+          </div>
+          <canvas id="mini-{{ loop.index }}" height="140"></canvas>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Gemini AI Explanation -->
+      <div class="dash-chart-card" style="margin-top: 20px;">
+        <div class="chart-card-header">
+          <span class="chart-title">🤖 Gemini AI Explanation</span>
+          <div class="chart-toggle">
+            <button class="ctoggle active" onclick="setExplain('full', this)">📌 Key Points</button>
+            <button class="ctoggle" onclick="setExplain('summary', this)">⚡ Summary</button>
+          </div>
+        </div>
+        <div class="domain-context-banner">
+          {% if domain == 'hiring' %}💼 Analyzing bias in context of Recruitment & Hiring Decisions
+          {% elif domain == 'finance' %}🏦 Analyzing bias in context of Loan Approvals & Finance
+          {% else %}🏥 Analyzing bias in context of Medical Diagnosis & Healthcare{% endif %}
+        </div>
+        <div id="explain-full" class="explanation-text">{{ explanation.full }}</div>
+        <div id="explain-summary" class="explanation-text" style="display:none">{{ explanation.summary }}</div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="dash-right" id="rightPanel">
+
+      <div class="right-panel-title">📋 Bias Details</div>
+
+      {% for col, data in results.items() %}
+      <div class="detail-card" id="detail-{{ loop.index }}"
+           data-col="{{ col }}"
+           data-bias="{{ 'high' if '⚠️' in data.label else 'moderate' if '⚡' in data.label else 'balanced' }}">
+
+        <div class="detail-header">
+          <span class="detail-col-name">{{ col }}</span>
+          <span class="badge {% if '⚠️' in data.label %}badge-high{% elif '⚡' in data.label %}badge-moderate{% else %}badge-low{% endif %}">
+            {{ data.label }}
+          </span>
+        </div>
+
+        <!-- Bias Bar -->
+        <div class="detail-bias-bar-wrap">
+          <div class="detail-bias-bar {% if '⚠️' in data.label %}bar-high{% elif '⚡' in data.label %}bar-moderate{% else %}bar-low{% endif %}"
+               style="width: {{ (data.bias_score * 100)|int }}%"></div>
+        </div>
+        <div class="detail-score-row">
+          <span>Score: <strong>{{ data.bias_score }}</strong></span>
+          <span>Groups: <strong>{{ data.distribution | length }}</strong></span>
+        </div>
+
+        <!-- Metrics -->
+        <div class="detail-metrics">
+          <div class="detail-metric">
+            <span class="dm-label">Gini</span>
+            <span class="dm-value">{{ data.gini }}</span>
+          </div>
+          <div class="detail-metric">
+            <span class="dm-label">Entropy</span>
+            <span class="dm-value">{{ data.entropy_score }}</span>
+          </div>
+          <div class="detail-metric">
+            <span class="dm-label">Chi-p</span>
+            <span class="dm-value {% if data.chi_square.significant %}dm-red{% endif %}">
+              {{ data.chi_square.p_value }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Toggle Tags -->
+        <div class="detail-toggle">
+          <button class="dtoggle active" onclick="setTags({{ loop.index }}, 'full', this)">All</button>
+          <button class="dtoggle" onclick="setTags({{ loop.index }}, 'top', this)">Top 5</button>
+        </div>
+
+        <div id="dtags-full-{{ loop.index }}" class="detail-tags">
+          {% for key, val in data.distribution.items() %}
+          <span class="dtag">{{ key }}: {{ val }}</span>
+          {% endfor %}
+        </div>
+
+        <div id="dtags-top-{{ loop.index }}" class="detail-tags" style="display:none">
+          {% for key, val in data.distribution.items() %}
+            {% if loop.index <= 5 %}
+            <span class="dtag">{{ key }}: {{ val }}</span>
+            {% endif %}
+          {% endfor %}
+          {% if data.distribution | length > 5 %}
+          <span class="dtag dtag-muted">+{{ data.distribution | length - 5 }} more</span>
+          {% endif %}
+        </div>
+
+        <!-- Correlation -->
+        {% if data.correlations %}
+        <div class="detail-corr">
+          <div class="corr-title">🔗 Correlations</div>
+          {% for col_name, corr in data.correlations.items() %}
+          <div class="corr-item {% if corr.biased %}corr-item-biased{% endif %}">
+            <span>vs {{ col_name }}</span>
+            <span class="corr-pct">{{ corr.pct_difference }}% diff {% if corr.biased %}⚠️{% endif %}</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+      </div>
+      {% endfor %}
+
+    </div>
+  </div>
+
+  <script>
+    const colors = ['#4285F4','#EA4335','#FBBC04','#34A853','#FF6D00','#46BDC6','#7B61FF','#E52592','#12B5CB'];
+
+    // Overview Chart
+    const overviewLabels = {{ results.keys() | list | tojson }};
+    const overviewScores = {{ results.values() | map(attribute='bias_score') | list | tojson }};
+    const overviewColors = overviewScores.map(s => s > 0.5 ? '#EA4335' : s > 0.2 ? '#FBBC04' : '#34A853');
+
+    let overviewChart = new Chart(document.getElementById('overviewChart'), {
+      type: 'bar',
+      data: {
+        labels: overviewLabels,
+        datasets: [{
+          label: 'Bias Score',
+          data: overviewScores,
+          backgroundColor: overviewColors,
+          borderRadius: 6,
+          borderSkipped: false,
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => ` Bias Score: ${ctx.raw} — ${ctx.raw > 0.5 ? 'High' : ctx.raw > 0.2 ? 'Moderate' : 'Balanced'}`
+            }
+          }
+        },
+        scales: {
+          x: { ticks: { color: '#555' }, grid: { color: 'rgba(0,0,0,0.05)' } },
+          y: { min: 0, max: 1, ticks: { color: '#555' }, grid: { color: 'rgba(0,0,0,0.05)' } }
+        }
+      }
+    });
+
+    function switchOverview(type, btn) {
+      document.querySelectorAll('.ctoggle').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      overviewChart.destroy();
+      overviewChart = new Chart(document.getElementById('overviewChart'), {
+        type: type,
+        data: {
+          labels: overviewLabels,
+          datasets: [{
+            label: 'Bias Score',
+            data: overviewScores,
+            backgroundColor: overviewColors,
+            borderColor: overviewColors,
+            borderWidth: 2,
+            borderRadius: type === 'bar' ? 6 : 0,
+            fill: type === 'radar',
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: type === 'bar' ? {
+            x: { ticks: { color: '#555' }, grid: { color: 'rgba(0,0,0,0.05)' } },
+            y: { min: 0, max: 1, ticks: { color: '#555' }, grid: { color: 'rgba(0,0,0,0.05)' } }
+          } : {
+            r: { ticks: { color: '#555' }, grid: { color: 'rgba(0,0,0,0.1)' }, pointLabels: { color: '#333' } }
+          }
+        }
+      });
+    }
+
+    // Mini Charts
+    const allData = {
+      {% for col, data in results.items() %}
+      "{{ col }}": {
+        labels: {{ data.distribution.keys() | list | tojson }},
+        values: {{ data.distribution.values() | list | tojson }}
+      },
+      {% endfor %}
+    };
+
+    {% for col, data in results.items() %}
+    (function() {
+      const labels = {{ data.distribution.keys() | list | tojson }};
+      const values = {{ data.distribution.values() | list | tojson }};
+      const limit = 8;
+      const l = labels.length > limit ? [...labels.slice(0,limit), 'Others'] : labels;
+      const v = labels.length > limit ? [...values.slice(0,limit), values.slice(limit).reduce((a,b)=>a+b,0)] : values;
+      new Chart(document.getElementById('mini-{{ loop.index }}'), {
+        type: 'doughnut',
+        data: {
+          labels: l,
+          datasets: [{
+            data: v,
+            backgroundColor: colors.slice(0, l.length),
+            borderWidth: 2,
+            borderColor: '#fff'
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { position: 'bottom', labels: { color: '#555', font: { size: 10 }, padding: 8 } }
+          }
+        }
+      });
+    })();
+    {% endfor %}
+
+    // Filters
+    function filterColumn(val) {
+      document.querySelectorAll('.mini-chart-card').forEach(c => {
+        c.style.display = (val === 'all' || c.dataset.col === val) ? 'block' : 'none';
+      });
+      document.querySelectorAll('.detail-card').forEach(c => {
+        c.style.display = (val === 'all' || c.dataset.col === val) ? 'block' : 'none';
+      });
+    }
+
+    function filterBias(val) {
+      document.querySelectorAll('.mini-chart-card').forEach(c => {
+        c.style.display = (val === 'all' || c.dataset.bias === val) ? 'block' : 'none';
+      });
+      document.querySelectorAll('.detail-card').forEach(c => {
+        c.style.display = (val === 'all' || c.dataset.bias === val) ? 'block' : 'none';
+      });
+    }
+
+    function setExplain(mode, btn) {
+      btn.closest('.chart-card-header').querySelectorAll('.ctoggle').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('explain-full').style.display = mode === 'full' ? 'block' : 'none';
+      document.getElementById('explain-summary').style.display = mode === 'summary' ? 'block' : 'none';
+    }
+
+    function setTags(idx, mode, btn) {
+      btn.parentElement.querySelectorAll('.dtoggle').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('dtags-full-' + idx).style.display = mode === 'full' ? 'flex' : 'none';
+      document.getElementById('dtags-top-' + idx).style.display = mode === 'top' ? 'flex' : 'none';
+    }
+  </script>
+  <!-- Chat Panel -->
+<button class="chat-fab" id="chatFab" onclick="toggleChatWindow()">
+    💬 Ask Gemini
+  </button>
+
+  <div class="chat-panel" id="chatPanel" style="display: none;">
+    <div class="chat-header">
+      <span>🤖 Ask Gemini Assistant</span>
+      <span class="chat-close" onclick="toggleChatWindow()">✖</span>
+    </div>
+    <div class="chat-body" id="chatBody">
+      <div class="chat-messages" id="chatMessages">
+        <div class="chat-msg chat-msg-bot">
+          👋 Hi! I can help you explore your dataset. Try asking me things like:
+          <div class="chat-suggestions">
+            <button class="chat-suggest" onclick="sendSuggestion(this)">Show rejected candidates with 3+ years experience</button>
+            <button class="chat-suggest" onclick="sendSuggestion(this)">Find people with high skills but low AI score</button>
+            <button class="chat-suggest" onclick="sendSuggestion(this)">Show female candidates who were rejected</button>
+          </div>
+        </div>
+      </div>
+      <div id="chatResults" style="display:none">
+        <div class="chat-result-header">
+          <span id="resultDescription">Results</span>
+          <span id="resultCount" class="result-count"></span>
+          <div class="export-btns">
+            <a href="/export/csv" class="export-btn export-csv">📥 CSV</a>
+            <a href="/export/pdf" class="export-btn export-pdf">📄 PDF</a>
+          </div>
+        </div>
+        <div class="chat-table-wrap">
+          <table class="chat-table" id="chatTable">
+            <thead id="chatTableHead"></thead>
+            <tbody id="chatTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="chat-input-row">
+        <input type="text" id="chatInput" class="chat-input"
+               placeholder="Ask about your data..."
+               onkeydown="if(event.key==='Enter') sendChat()">
+        <button class="chat-send" onclick="sendChat()">Send →</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  let chatWindowOpen = false;
+  
+  function toggleChatWindow() {
+    chatWindowOpen = !chatWindowOpen;
+    document.getElementById('chatPanel').style.display = chatWindowOpen ? 'flex' : 'none';
+    
+    // Change the button text when opened/closed
+    const fab = document.getElementById('chatFab');
+    if (chatWindowOpen) {
+      fab.innerHTML = '✖ Close Chat';
+      fab.style.background = '#1a1a2e'; // Darker when open
+    } else {
+      fab.innerHTML = '💬 Ask Gemini';
+      fab.style.background = '#4285F4'; // Blue when closed
+    }
+  }
+
+  function sendSuggestion(btn) {
+    document.getElementById('chatInput').value = btn.textContent;
+    sendChat();
+  }
+
+  async function sendChat() {
+    const input = document.getElementById('chatInput');
+    const msg = input.value.trim();
+    if (!msg) return;
+
+    // Add user message
+    addMessage(msg, 'user');
+    input.value = '';
+
+    // Add loading
+    const loadingId = addMessage('🔍 Analyzing your dataset...', 'bot');
+
+    try {
+      const res = await fetch('/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: msg })
+      });
+
+      const data = await res.json();
+
+      // Remove loading
+      document.getElementById(loadingId).remove();
+
+      // Add response
+      addMessage(data.response, 'bot');
+
+      // Show table if rows found
+      if (data.rows && data.rows.length > 0) {
+        showResultTable(data.rows, data.columns, data.count, data.description);
+      } else {
+        addMessage('No matching rows found. Try a different query!', 'bot');
+      }
+
+    } catch (e) {
+      document.getElementById(loadingId).remove();
+      addMessage('Something went wrong. Please try again!', 'bot');
+    }
+  }
+
+  function addMessage(text, type) {
+    const msgs = document.getElementById('chatMessages');
+    const id = 'msg-' + Date.now();
+    const div = document.createElement('div');
+    div.id = id;
+    div.className = `chat-msg chat-msg-${type}`;
+    div.textContent = text;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+    return id;
+  }
+
+  function showResultTable(rows, columns, count, description) {
+    document.getElementById('chatResults').style.display = 'block';
+    document.getElementById('resultDescription').textContent = description;
+    document.getElementById('resultCount').textContent = `${count} rows found`;
+
+    // Build table header
+    const thead = document.getElementById('chatTableHead');
+    thead.innerHTML = '<tr>' + columns.map(c => `<th>${c}</th>`).join('') + '</tr>';
+
+    // Build table body
+    const tbody = document.getElementById('chatTableBody');
+    tbody.innerHTML = rows.map(row =>
+      '<tr>' + columns.map(c => `<td>${row[c] ?? ''}</td>`).join('') + '</tr>'
+    ).join('');
+
+    // Scroll to results
+    document.getElementById('chatResults').scrollIntoView({ behavior: 'smooth' });
+  }
+</script>
+</body>
+</html>

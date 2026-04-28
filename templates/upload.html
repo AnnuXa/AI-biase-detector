@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Bias Detector — Upload</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --deep: #060914;
+    --accent: #6c63ff;
+    --accent2: #a78bfa;
+    --teal: #2dd4bf;
+    --coral: #f87171;
+    --amber: #fbbf24;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--deep);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    overflow-x: hidden;
+  }
+
+  /* Backgrounds */
+  #stars { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+  .orb { position: fixed; border-radius: 50%; filter: blur(80px); opacity: 0.12; pointer-events: none; z-index: 0; }
+  .orb-1 { width: 500px; height: 500px; background: var(--accent); top: -100px; left: -100px; }
+  .orb-2 { width: 400px; height: 400px; background: var(--teal); bottom: -80px; right: -80px; }
+
+  /* Layout */
+  .page-container {
+    position: relative;
+    z-index: 10;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+  }
+
+  .glass-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(16px);
+    border-radius: 20px;
+    padding: 2.5rem;
+    max-width: 800px;
+    width: 100%;
+    text-align: center;
+    animation: fadeSlide 0.6s ease both;
+  }
+
+  .title {
+    font-family: 'Syne', sans-serif;
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: #fff;
+  }
+  
+  .subtitle {
+    color: var(--muted);
+    margin-bottom: 2rem;
+    font-size: 1rem;
+  }
+
+  /* Domain Cards */
+  .domain-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .domain-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 1.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .domain-card.active {
+    background: rgba(108, 99, 255, 0.1);
+    border-color: var(--accent);
+    box-shadow: 0 0 20px rgba(108, 99, 255, 0.2);
+  }
+
+  .domain-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+  .domain-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.1rem; margin-bottom: 0.25rem; }
+  .domain-desc { font-size: 0.8rem; color: var(--muted); }
+
+  /* Upload Box */
+  .upload-box {
+    background: rgba(0, 0, 0, 0.2);
+    border: 2px dashed rgba(148, 163, 184, 0.3);
+    border-radius: 14px;
+    padding: 2.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-bottom: 1.5rem;
+  }
+  
+  .upload-box:hover {
+    border-color: var(--teal);
+    background: rgba(45, 212, 191, 0.05);
+  }
+
+  .upload-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+  .file-name { display: block; margin-top: 0.5rem; color: var(--teal); font-size: 0.9rem; }
+
+  /* Buttons */
+  .btn-primary {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    padding: 1rem;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--teal) 100%);
+    color: #fff;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 20px rgba(108, 99, 255, 0.4);
+  }
+
+  .back-link {
+    display: inline-block;
+    margin-top: 1.5rem;
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: color 0.2s;
+  }
+  .back-link:hover { color: var(--text); }
+
+  @keyframes fadeSlide {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0);    }
+  }
+</style>
+</head>
+<body>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<canvas id="stars"></canvas>
+
+<div class="page-container">
+  <div class="glass-card">
+    <h1 class="title">Dataset Bias Analysis</h1>
+    <p class="subtitle">Select a domain and upload your data to begin.</p>
+
+    <div class="domain-grid">
+      <div class="domain-card active" onclick="selectDomain('hiring', this)">
+        <div class="domain-icon">💼</div>
+        <div class="domain-name">Hiring</div>
+        <div class="domain-desc">Recruitment & HR</div>
+      </div>
+      <div class="domain-card" onclick="selectDomain('finance', this)">
+        <div class="domain-icon">🏦</div>
+        <div class="domain-name">Finance</div>
+        <div class="domain-desc">Loans & Credit</div>
+      </div>
+      <div class="domain-card" onclick="selectDomain('healthcare', this)">
+        <div class="domain-icon">🏥</div>
+        <div class="domain-name">Healthcare</div>
+        <div class="domain-desc">Medical Decisions</div>
+      </div>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" action="/upload">
+      <input type="hidden" name="domain" id="domain-input" value="hiring">
+      
+      <div class="upload-box" onclick="document.getElementById('fileInput').click()">
+        <div class="upload-icon">📂</div>
+        <p style="color: var(--muted);">Click to upload your CSV file</p>
+        <input type="file" id="fileInput" name="file" accept=".csv" required hidden>
+        <span id="fileName" class="file-name">No file chosen</span>
+      </div>
+
+      <button type="submit" class="btn-primary">Analyze Dataset →</button>
+    </form>
+
+    <a href="/" class="back-link">← Back to Home</a>
+  </div>
+</div>
+
+<script>
+  function selectDomain(domain, element) {
+    document.querySelectorAll('.domain-card').forEach(el => el.classList.remove('active'));
+    element.classList.add('active');
+    document.getElementById('domain-input').value = domain;
+  }
+
+  document.getElementById('fileInput').addEventListener('change', function() {
+    document.getElementById('fileName').textContent = this.files[0].name;
+  });
+
+  // Starfield
+  const canvas = document.getElementById('stars');
+  const ctx = canvas.getContext('2d');
+  let stars = [];
+
+  function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+  function initStars(n = 100) {
+    stars = Array.from({length: n}, () => ({
+      x: Math.random() * canvas.width, y: Math.random() * canvas.height,
+      r: Math.random() * 1.2 + 0.2, alpha: Math.random() * 0.7 + 0.1,
+      speed: Math.random() * 0.3 + 0.05, twinkleSpeed: Math.random() * 0.02 + 0.005,
+      twinkleDir: Math.random() > 0.5 ? 1 : -1
+    }));
+  }
+  function drawStars() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    stars.forEach(s => {
+      s.alpha += s.twinkleSpeed * s.twinkleDir;
+      if (s.alpha > 0.9 || s.alpha < 0.05) s.twinkleDir *= -1;
+      s.y -= s.speed;
+      if (s.y < 0) { s.y = canvas.height; s.x = Math.random() * canvas.width; }
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(180,200,255,${s.alpha})`; ctx.fill();
+    });
+    requestAnimationFrame(drawStars);
+  }
+  resize(); initStars(); drawStars();
+  window.addEventListener('resize', () => { resize(); initStars(); });
+</script>
+</body>
+</html>

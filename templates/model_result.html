@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Model Bias Results</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="dashboard-body">
+
+  <div class="dash-navbar">
+    <div class="dash-brand">🤖 Model Bias Analysis</div>
+    <div class="dash-filters">
+      <span class="dash-domain-tag">Target: {{ actual_col }}</span>
+      <span class="dash-domain-tag" style="background: rgba(234, 67, 53, 0.1); color: #EA4335; border-color: rgba(234, 67, 53, 0.2);">Predicted: {{ predicted_col }}</span>
+    </div>
+    <a href="/model" class="dash-back">← New Analysis</a>
+  </div>
+
+  <div class="dash-layout" style="display: block; max-width: 1000px; margin: 0 auto; padding: 20px;">
+
+    <div class="overall-card {% if high > 0 %}overall-high{% elif moderate > 0 %}overall-moderate{% else %}overall-low{% endif %}">
+      <div class="overall-left">
+        <div class="overall-label">
+          {% if high > 0 %}⚠️ Model Shows High Bias
+          {% elif moderate > 0 %}⚡ Model Shows Moderate Bias
+          {% else %}✅ Model Appears Fair
+          {% endif %}
+        </div>
+        <div class="overall-stats">
+          <span class="ostat ostat-high">⚠️ {{ high }} Biased</span>
+          <span class="ostat ostat-moderate">⚡ {{ moderate }} Moderate</span>
+          <span class="ostat ostat-low">✅ {{ fair }} Fair</span>
+        </div>
+        <div class="most-biased">
+          📊 Comparing: <strong>{{ actual_col }}</strong> vs <strong>{{ predicted_col }}</strong>
+        </div>
+      </div>
+      <div class="overall-right">
+        <div class="health-circle {% if high > 0 %}overall-high-circle{% elif moderate > 0 %}overall-moderate-circle{% else %}overall-low-circle{% endif %}">
+          <span class="health-number">{{ fair }}</span>
+          <span class="health-label">Fair Groups</span>
+        </div>
+      </div>
+    </div>
+
+    {% for col, data in model_results.items() %}
+    <div class="dash-chart-card result-block" style="margin-bottom: 24px; padding: 24px;">
+      
+      <div class="chart-card-header" style="margin-bottom: 12px;">
+        <span class="chart-title" style="font-size: 1.1rem;">{{ col }}</span>
+        <span class="badge {% if '⚠️' in data.label %}badge-high{% elif '⚡' in data.label %}badge-moderate{% else %}badge-low{% endif %}" style="font-size: 0.85rem; padding: 4px 12px;">
+          {{ data.label }}
+        </span>
+      </div>
+
+      <div class="metrics-grid" style="margin-bottom: 20px;">
+        <div class="metric-box">
+          <span class="metric-label">📊 Accuracy Gap</span>
+          <span class="metric-value">{{ data.accuracy_gap }}%</span>
+          <span class="metric-hint">{{ "⚠️ High" if data.accuracy_gap > 15 else "⚡ Moderate" if data.accuracy_gap > 5 else "✅ Low" }}</span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">❌ FNR Gap</span>
+          <span class="metric-value">{{ data.fnr_gap }}%</span>
+          <span class="metric-hint">{{ "⚠️ High" if data.fnr_gap > 20 else "⚡ Moderate" if data.fnr_gap > 10 else "✅ Low" }}</span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">👥 Groups</span>
+          <span class="metric-value">{{ data.group_stats | length }}</span>
+          <span class="metric-hint">Analyzed</span>
+        </div>
+      </div>
+
+      <div class="group-stats">
+        {% for group, stats in data.group_stats.items() %}
+        <div class="group-row">
+          <div class="group-name">{{ group }}</div>
+          <div class="group-metrics">
+            <span class="gmetric">🎯 Accuracy: <strong>{{ stats.accuracy }}%</strong></span>
+            <span class="gmetric">❌ FNR: <strong>{{ stats.false_negative_rate }}%</strong></span>
+            <span class="gmetric">⚡ FPR: <strong>{{ stats.false_positive_rate }}%</strong></span>
+            <span class="gmetric">📌 Total: <strong>{{ stats.total }}</strong></span>
+          </div>
+          <div class="group-bar-wrap">
+            <div class="group-bar" style="width: {{ stats.accuracy }}%"></div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="charts-row" style="margin-top: 20px;">
+        <div class="chart-box">
+          <p class="chart-label">Accuracy by Group</p>
+          <div style="height: 180px; width: 100%;">
+             <canvas id="acc-{{ loop.index }}"></canvas>
+          </div>
+        </div>
+        <div class="chart-box">
+          <p class="chart-label">False Negative Rate</p>
+          <div style="height: 180px; width: 100%;">
+             <canvas id="fnr-{{ loop.index }}"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <script>
+        (function() {
+          const idx = {{ loop.index }};
+          const groups = {{ data.group_stats.keys() | list | tojson }};
+          const accuracies = {{ data.group_stats.values() | map(attribute='accuracy') | list | tojson }};
+          const fnrs = {{ data.group_stats.values() | map(attribute='false_negative_rate') | list | tojson }};
+          const colors = ['#4285F4','#EA4335','#FBBC04','#34A853','#FF6D00','#46BDC6'];
+
+          new Chart(document.getElementById('acc-' + idx), {
+            type: 'bar',
+            data: {
+              labels: groups,
+              datasets: [{
+                data: accuracies,
+                backgroundColor: colors.slice(0, groups.length),
+                borderRadius: 6,
+                borderSkipped: false
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { display: false } },
+              scales: {
+                x: { ticks: { color: '#555' }, grid: { color: 'rgba(0,0,0,0.05)' } },
+                y: { min: 0, max: 100, ticks: { color: '#555' }, grid: { color: 'rgba(0,0,0,0.05)' } }
+              }
+            }
+          });
+
+          new Chart(document.getElementById('fnr-' + idx), {
+            type: 'bar',
+            data: {
+              labels: groups,
+              datasets: [{
+                data: fnrs,
+                backgroundColor: colors.slice(0, groups.length).reverse(),
+                borderRadius: 6,
+                borderSkipped: false
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { display: false } },
+              scales: {
+                x: { ticks: { color: '#555' }, grid: { color: 'rgba(0,0,0,0.05)' } },
+                y: { min: 0, max: 100, ticks: { color: '#555' }, grid: { color: 'rgba(0,0,0,0.05)' } }
+              }
+            }
+          });
+        })();
+      </script>
+    </div>
+    {% endfor %}
+
+    <div class="dash-chart-card ai-explanation" style="margin-top: 20px;">
+      <div class="chart-card-header">
+        <span class="chart-title" style="font-size: 1.1rem;">🤖 Gemini AI Explanation</span>
+        <div class="chart-toggle">
+          <button class="ctoggle active" onclick="setExplain('full', this)">📌 Key Points</button>
+          <button class="ctoggle" onclick="setExplain('summary', this)">⚡ Summary</button>
+        </div>
+      </div>
+      <div class="domain-context-banner">
+        🤖 Analyzing fairness of model predictions across demographic groups
+      </div>
+      <div id="explain-full" class="explanation-text">{{ explanation.full }}</div>
+      <div id="explain-summary" class="explanation-text" style="display:none">{{ explanation.summary }}</div>
+    </div>
+
+  </div> <button class="chat-fab" id="chatFab" onclick="toggleChatWindow()">
+    💬 Ask Gemini
+  </button>
+
+  <div class="chat-panel" id="chatPanel" style="display: none;">
+    <div class="chat-header">
+      <span>🤖 Ask Gemini Assistant</span>
+      <span class="chat-close" onclick="toggleChatWindow()">✖</span>
+    </div>
+    <div class="chat-body" id="chatBody">
+      <div class="chat-messages" id="chatMessages">
+        <div class="chat-msg chat-msg-bot">
+          👋 Hi! I can help you explore your dataset. Try asking me things like:
+          <div class="chat-suggestions">
+            <button class="chat-suggest" onclick="sendSuggestion(this)">Show rejected candidates with 3+ years experience</button>
+            <button class="chat-suggest" onclick="sendSuggestion(this)">Find people with high skills but low AI score</button>
+            <button class="chat-suggest" onclick="sendSuggestion(this)">Show female candidates who were rejected</button>
+          </div>
+        </div>
+      </div>
+      <div id="chatResults" style="display:none">
+        <div class="chat-result-header">
+          <span id="resultDescription">Results</span>
+          <span id="resultCount" class="result-count"></span>
+          <div class="export-btns">
+            <a href="/export/csv" class="export-btn export-csv">📥 CSV</a>
+            <a href="/export/pdf" class="export-btn export-pdf">📄 PDF</a>
+          </div>
+        </div>
+        <div class="chat-table-wrap">
+          <table class="chat-table" id="chatTable">
+            <thead id="chatTableHead"></thead>
+            <tbody id="chatTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="chat-input-row">
+        <input type="text" id="chatInput" class="chat-input"
+               placeholder="Ask about your data..."
+               onkeydown="if(event.key==='Enter') sendChat()">
+        <button class="chat-send" onclick="sendChat()">Send →</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Toggle Explain
+    function setExplain(mode, btn) {
+      btn.closest('.chart-card-header').querySelectorAll('.ctoggle').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('explain-full').style.display = mode === 'full' ? 'block' : 'none';
+      document.getElementById('explain-summary').style.display = mode === 'summary' ? 'block' : 'none';
+    }
+
+    // Chat Window Logic
+    let chatWindowOpen = false;
+    function toggleChatWindow() {
+      chatWindowOpen = !chatWindowOpen;
+      document.getElementById('chatPanel').style.display = chatWindowOpen ? 'flex' : 'none';
+      
+      const fab = document.getElementById('chatFab');
+      if (chatWindowOpen) {
+        fab.innerHTML = '✖ Close Chat';
+        fab.style.background = '#1a1a2e'; 
+      } else {
+        fab.innerHTML = '💬 Ask Gemini';
+        fab.style.background = '#4285F4'; 
+      }
+    }
+
+    function sendSuggestion(btn) {
+      document.getElementById('chatInput').value = btn.textContent;
+      sendChat();
+    }
+
+    async function sendChat() {
+      const input = document.getElementById('chatInput');
+      const msg = input.value.trim();
+      if (!msg) return;
+
+      addMessage(msg, 'user');
+      input.value = '';
+
+      const loadingId = addMessage('🔍 Analyzing your dataset...', 'bot');
+
+      try {
+        const res = await fetch('/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: msg })
+        });
+
+        const data = await res.json();
+        document.getElementById(loadingId).remove();
+        addMessage(data.response, 'bot');
+
+        if (data.rows && data.rows.length > 0) {
+          showResultTable(data.rows, data.columns, data.count, data.description);
+        } else {
+          addMessage('No matching rows found. Try a different query!', 'bot');
+        }
+      } catch (e) {
+        document.getElementById(loadingId).remove();
+        addMessage('Something went wrong. Please try again!', 'bot');
+      }
+    }
+
+    function addMessage(text, type) {
+      const msgs = document.getElementById('chatMessages');
+      const id = 'msg-' + Date.now();
+      const div = document.createElement('div');
+      div.id = id;
+      div.className = `chat-msg chat-msg-${type}`;
+      div.textContent = text;
+      msgs.appendChild(div);
+      msgs.scrollTop = msgs.scrollHeight;
+      return id;
+    }
+
+    function showResultTable(rows, columns, count, description) {
+      document.getElementById('chatResults').style.display = 'block';
+      document.getElementById('resultDescription').textContent = description;
+      document.getElementById('resultCount').textContent = `${count} rows found`;
+
+      const thead = document.getElementById('chatTableHead');
+      thead.innerHTML = '<tr>' + columns.map(c => `<th>${c}</th>`).join('') + '</tr>';
+
+      const tbody = document.getElementById('chatTableBody');
+      tbody.innerHTML = rows.map(row =>
+        '<tr>' + columns.map(c => `<td>${row[c] ?? ''}</td>`).join('') + '</tr>'
+      ).join('');
+
+      document.getElementById('chatResults').scrollIntoView({ behavior: 'smooth' });
+    }
+  </script>
+</body>
+</html>

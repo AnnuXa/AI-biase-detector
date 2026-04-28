@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Bias Detector — Home</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --deep: #060914;
+    --mid: #0d1526;
+    --accent: #6c63ff;
+    --accent2: #a78bfa;
+    --teal: #2dd4bf;
+    --coral: #f87171;
+    --amber: #fbbf24;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--deep);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    overflow-x: hidden;
+  }
+
+  /* ── Stars canvas ── */
+  #stars { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+
+  /* ── Floating islands ── */
+  .islands {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  .island {
+    position: absolute;
+    border-radius: 12px;
+    opacity: 0.18;
+    animation: float 8s ease-in-out infinite;
+  }
+
+  .island-1 {
+    width: 180px; height: 80px;
+    background: linear-gradient(135deg, var(--accent), var(--teal));
+    top: 15%; left: 5%;
+    clip-path: polygon(0 40%, 15% 0, 85% 0, 100% 40%, 85% 100%, 15% 100%);
+    animation-delay: 0s;
+  }
+  .island-2 {
+    width: 120px; height: 55px;
+    background: linear-gradient(135deg, var(--coral), var(--amber));
+    top: 20%; right: 8%;
+    clip-path: polygon(0 40%, 15% 0, 85% 0, 100% 40%, 85% 100%, 15% 100%);
+    animation-delay: -2s;
+  }
+  .island-3 {
+    width: 90px; height: 42px;
+    background: linear-gradient(135deg, var(--teal), var(--accent2));
+    bottom: 30%; left: 10%;
+    clip-path: polygon(0 40%, 15% 0, 85% 0, 100% 40%, 85% 100%, 15% 100%);
+    animation-delay: -4s;
+  }
+  .island-4 {
+    width: 140px; height: 62px;
+    background: linear-gradient(135deg, var(--accent2), var(--coral));
+    bottom: 25%; right: 6%;
+    clip-path: polygon(0 40%, 15% 0, 85% 0, 100% 40%, 85% 100%, 15% 100%);
+    animation-delay: -6s;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px) rotate(-1deg); }
+    50% { transform: translateY(-24px) rotate(1deg); }
+  }
+
+  /* ── Hero layout ── */
+  .hero {
+    position: relative;
+    z-index: 10;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2rem;
+  }
+
+  /* ── Badge ── */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(108, 99, 255, 0.12);
+    border: 1px solid rgba(108, 99, 255, 0.35);
+    border-radius: 999px;
+    padding: 6px 18px;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent2);
+    margin-bottom: 2rem;
+    animation: fadeSlide 0.7s ease both;
+    animation-delay: 0.1s;
+  }
+  .badge-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--teal);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.4); }
+  }
+
+  /* ── Title ── */
+  .title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(3rem, 9vw, 6.5rem);
+    line-height: 1.0;
+    letter-spacing: -0.03em;
+    margin-bottom: 1.5rem;
+    animation: fadeSlide 0.8s ease both;
+    animation-delay: 0.25s;
+  }
+
+  .title-line1 { display: block; color: var(--text); }
+  .title-line2 {
+    display: block;
+    background: linear-gradient(90deg, var(--accent) 0%, var(--teal) 60%, var(--amber) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* ── Subtitle ── */
+  .subtitle {
+    max-width: 540px;
+    font-size: clamp(1rem, 2.5vw, 1.2rem);
+    color: var(--muted);
+    line-height: 1.7;
+    margin-bottom: 3rem;
+    font-weight: 300;
+    animation: fadeSlide 0.8s ease both;
+    animation-delay: 0.4s;
+  }
+
+  /* ── Buttons ── */
+  .cta-group {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+    animation: fadeSlide 0.8s ease both;
+    animation-delay: 0.55s;
+  }
+
+  .btn-primary {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 1rem 2.2rem;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--teal) 100%);
+    color: #fff;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    border: none;
+    border-radius: 14px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 0 32px rgba(108, 99, 255, 0.4);
+    overflow: hidden;
+  }
+  .btn-primary::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.15), rgba(255,255,255,0));
+    border-radius: 14px;
+  }
+  .btn-primary:hover {
+    transform: translateY(-3px) scale(1.03);
+    box-shadow: 0 0 52px rgba(108, 99, 255, 0.65);
+  }
+  .btn-primary:active { transform: scale(0.98); }
+
+  .arrow-icon {
+    width: 20px; height: 20px;
+    transition: transform 0.2s;
+  }
+  .btn-primary:hover .arrow-icon { transform: translateX(4px); }
+
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 1rem 2rem;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 14px;
+    color: var(--muted);
+    font-size: 0.95rem;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    background: rgba(255,255,255,0.03);
+  }
+  .btn-secondary:hover {
+    border-color: rgba(108, 99, 255, 0.5);
+    color: var(--accent2);
+    background: rgba(108, 99, 255, 0.06);
+  }
+
+  /* ── Stats strip ── */
+  .stats {
+    display: flex;
+    gap: 2.5rem;
+    margin-top: 4rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    animation: fadeSlide 0.8s ease both;
+    animation-delay: 0.7s;
+  }
+  .stat {
+    text-align: center;
+  }
+  .stat-value {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1.6rem;
+    background: linear-gradient(90deg, var(--accent2), var(--teal));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .stat-label {
+    font-size: 0.78rem;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+  .stat-divider {
+    width: 1px;
+    height: 40px;
+    background: rgba(148,163,184,0.15);
+    align-self: center;
+  }
+
+  /* ── Feature cards ── */
+  .features {
+    position: relative;
+    z-index: 10;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.25rem;
+    max-width: 860px;
+    width: 100%;
+    margin: 4rem auto 0;
+    padding: 0 1.5rem;
+    animation: fadeSlide 0.9s ease both;
+    animation-delay: 0.85s;
+  }
+  .feat-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 1.4rem 1.6rem;
+    transition: transform 0.25s ease, border-color 0.25s ease, background 0.25s ease;
+  }
+  .feat-card:hover {
+    transform: translateY(-5px);
+    border-color: rgba(108, 99, 255, 0.4);
+    background: rgba(108, 99, 255, 0.07);
+  }
+  .feat-icon {
+    font-size: 1.6rem;
+    margin-bottom: 0.75rem;
+    display: block;
+  }
+  .feat-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text);
+    margin-bottom: 0.4rem;
+  }
+  .feat-desc {
+    font-size: 0.82rem;
+    color: var(--muted);
+    line-height: 1.55;
+  }
+
+  /* ── Footer hint ── */
+  .footer-hint {
+    position: relative;
+    z-index: 10;
+    margin: 3rem auto 2rem;
+    text-align: center;
+    font-size: 0.78rem;
+    color: rgba(148,163,184,0.45);
+    letter-spacing: 0.05em;
+    animation: fadeSlide 1s ease both;
+    animation-delay: 1s;
+  }
+
+  /* ── Glow orbs ── */
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.12;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .orb-1 { width: 500px; height: 500px; background: var(--accent); top: -100px; left: -100px; }
+  .orb-2 { width: 400px; height: 400px; background: var(--teal); bottom: -80px; right: -80px; }
+  .orb-3 { width: 300px; height: 300px; background: var(--coral); top: 40%; left: 50%; transform: translate(-50%,-50%); opacity: 0.06; }
+
+  /* ── Animations ── */
+  @keyframes fadeSlide {
+    from { opacity: 0; transform: translateY(28px); }
+    to   { opacity: 1; transform: translateY(0);    }
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 600px) {
+    .stats { gap: 1.5rem; }
+    .stat-divider { display: none; }
+    .features { padding: 0 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Glow orbs -->
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+
+<!-- Stars -->
+<canvas id="stars"></canvas>
+
+<!-- Floating islands -->
+<div class="islands">
+  <div class="island island-1"></div>
+  <div class="island island-2"></div>
+  <div class="island island-3"></div>
+  <div class="island island-4"></div>
+</div>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="badge">
+    <span class="badge-dot"></span>
+    Fairness-first AI analysis
+  </div>
+
+  <h1 class="title">
+    <span class="title-line1">Detect the Bias.</span>
+    <span class="title-line2">Fix the Future.</span>
+  </h1>
+
+  <p class="subtitle">
+    Upload your dataset, uncover hidden imbalances across demographics, 
+    and get AI-powered explanations — so your models stay fair and trustworthy.
+  </p>
+
+  <div class="cta-group">
+    <a href="/upload" class="btn-primary">
+      Let's Go
+      <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 12h14M12 5l7 7-7 7"/>
+      </svg>
+    </a>
+    <a href="/model" class="btn-secondary">
+      Check Model Bias →
+    </a>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-value">3</div>
+      <div class="stat-label">Bias Metrics</div>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat">
+      <div class="stat-value">AI</div>
+      <div class="stat-label">Explanations</div>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat">
+      <div class="stat-value">CSV</div>
+      <div class="stat-label">Any Dataset</div>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat">
+      <div class="stat-value">0</div>
+      <div class="stat-label">Setup needed</div>
+    </div>
+  </div>
+</section>
+
+<!-- Feature cards -->
+<div class="features">
+  <div class="feat-card">
+    <span class="feat-icon">⚖️</span>
+    <div class="feat-title">Dataset Bias Analysis</div>
+    <div class="feat-desc">Chi-square, entropy & Gini scoring across all demographic columns.</div>
+  </div>
+  <div class="feat-card">
+    <span class="feat-icon">🤖</span>
+    <div class="feat-title">Model Fairness Check</div>
+    <div class="feat-desc">Compare accuracy gaps and false negative rates across groups.</div>
+  </div>
+  <div class="feat-card">
+    <span class="feat-icon">💬</span>
+    <div class="feat-title">AI Chat & Export</div>
+    <div class="feat-desc">Ask questions about your data in plain English, export as CSV or PDF.</div>
+  </div>
+</div>
+
+<p class="footer-hint">No data stored · Open source · Built with ♥</p>
+
+<script>
+  // ── Starfield ──
+  const canvas = document.getElementById('stars');
+  const ctx = canvas.getContext('2d');
+  let stars = [];
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+
+  function initStars(n = 160) {
+    stars = Array.from({length: n}, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      r: Math.random() * 1.4 + 0.2,
+      alpha: Math.random() * 0.7 + 0.1,
+      speed: Math.random() * 0.3 + 0.05,
+      twinkleSpeed: Math.random() * 0.02 + 0.005,
+      twinkleDir: Math.random() > 0.5 ? 1 : -1
+    }));
+  }
+
+  function drawStars(t) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    stars.forEach(s => {
+      s.alpha += s.twinkleSpeed * s.twinkleDir;
+      if (s.alpha > 0.9 || s.alpha < 0.05) s.twinkleDir *= -1;
+      s.y -= s.speed;
+      if (s.y < 0) { s.y = canvas.height; s.x = Math.random() * canvas.width; }
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(180,200,255,${s.alpha})`;
+      ctx.fill();
+    });
+    requestAnimationFrame(drawStars);
+  }
+
+  resize();
+  initStars();
+  drawStars();
+  window.addEventListener('resize', () => { resize(); initStars(); });
+</script>
+</body>
+</html>

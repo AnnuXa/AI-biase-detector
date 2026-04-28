@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Model Bias Detection</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --deep: #060914;
+    --accent: #6c63ff;
+    --teal: #2dd4bf;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --glass: rgba(255, 255, 255, 0.03);
+    --glass-border: rgba(255, 255, 255, 0.08);
+  }
+
+  html, body {
+    height: 100%; background: var(--deep); color: var(--text);
+    font-family: 'DM Sans', sans-serif; overflow-x: hidden;
+  }
+
+  #stars { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+  .orb { position: fixed; border-radius: 50%; filter: blur(80px); opacity: 0.12; pointer-events: none; z-index: 0; }
+  .orb-1 { width: 500px; height: 500px; background: var(--accent); top: -100px; left: -100px; }
+  .orb-2 { width: 400px; height: 400px; background: var(--teal); bottom: -80px; right: -80px; }
+
+  .page-container {
+    position: relative; z-index: 10; min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem;
+  }
+
+  .glass-card {
+    background: var(--glass); border: 1px solid var(--glass-border);
+    backdrop-filter: blur(16px); border-radius: 20px;
+    padding: 2.5rem; max-width: 800px; width: 100%;
+    animation: fadeSlide 0.6s ease both;
+  }
+
+  .center { text-align: center; }
+  .title { font-family: 'Syne', sans-serif; font-size: 2.2rem; font-weight: 700; margin-bottom: 0.5rem; color: #fff; }
+  .subtitle { color: var(--muted); margin-bottom: 2rem; font-size: 1rem; }
+
+  .step-label {
+    font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--teal); margin-bottom: 1rem; text-align: center; font-weight: 700;
+  }
+
+  .upload-box {
+    background: rgba(0, 0, 0, 0.2); border: 2px dashed rgba(148, 163, 184, 0.3);
+    border-radius: 14px; padding: 2.5rem; cursor: pointer; text-align: center;
+    transition: all 0.2s ease; margin-bottom: 1.5rem;
+  }
+  .upload-box:hover { border-color: var(--teal); background: rgba(45, 212, 191, 0.05); }
+  .upload-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+  .file-name { display: block; margin-top: 0.5rem; color: var(--teal); font-size: 0.9rem; }
+
+  .btn-primary {
+    display: block; width: 100%; padding: 1rem; text-align: center;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--teal) 100%);
+    color: #fff; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem;
+    border: none; border-radius: 12px; cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 20px rgba(108, 99, 255, 0.4); }
+
+  /* Table styles */
+  .sample-hint { background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); border-radius: 12px; padding: 1.5rem; margin-top: 1.5rem; }
+  .sample-table table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 10px; }
+  .sample-table th { background: rgba(255,255,255,0.05); color: var(--teal); padding: 8px; text-align: left; }
+  .sample-table td { padding: 8px; border-bottom: 1px solid var(--glass-border); color: var(--muted); }
+
+  /* Form Elements */
+  .col-select-group { margin-bottom: 1.5rem; }
+  .col-select-label { display: block; font-size: 0.9rem; margin-bottom: 0.5rem; color: #fff; }
+  .col-select {
+    width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border);
+    color: var(--text); border-radius: 10px; padding: 12px; outline: none; font-family: 'DM Sans', sans-serif;
+  }
+  .col-select:focus { border-color: var(--teal); }
+  .col-select option { background: var(--deep); }
+
+  .checkbox-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+  .checkbox-card {
+    background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); border-radius: 10px;
+    padding: 10px 14px; display: flex; align-items: center; gap: 8px; cursor: pointer;
+    font-size: 0.9rem; transition: all 0.2s;
+  }
+  .checkbox-card:hover { border-color: var(--accent); background: rgba(108,99,255,0.05); }
+  .checkbox-card input { accent-color: var(--accent); }
+
+  .back-link { display: inline-block; margin-top: 1.5rem; color: var(--muted); text-decoration: none; font-size: 0.9rem; transition: color 0.2s; }
+  .back-link:hover { color: var(--text); }
+
+  @keyframes fadeSlide { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<canvas id="stars"></canvas>
+
+<div class="page-container">
+  <div class="glass-card">
+    <div class="center">
+      <h1 class="title">Model Bias Detection</h1>
+      <p class="subtitle">Upload your model's predictions to check for fairness</p>
+    </div>
+
+    {% if not columns %}
+    <div class="step-label">Step 1 — Upload Predictions CSV</div>
+    
+    <form method="POST" enctype="multipart/form-data" action="/model/columns">
+      <div class="upload-box" onclick="document.getElementById('fileInput').click()">
+        <div class="upload-icon">📂</div>
+        <p style="color: var(--muted);">Click to upload CSV with actual & predicted columns</p>
+        <input type="file" id="fileInput" name="file" accept=".csv" required hidden>
+        <span id="fileName" class="file-name">No file chosen</span>
+      </div>
+      <button type="submit" class="btn-primary">Load Columns →</button>
+    </form>
+
+    <div class="sample-hint">
+      <p style="color: #fff; font-weight: 500;">📋 Expected CSV format:</p>
+      <div class="sample-table">
+        <table>
+          <tr><th>gender</th><th>department</th><th>actual</th><th>predicted</th></tr>
+          <tr><td>Female</td><td>Engineering</td><td>1</td><td>0</td></tr>
+          <tr><td>Male</td><td>Engineering</td><td>1</td><td>1</td></tr>
+        </table>
+      </div>
+      <p style="margin-top:12px; font-size:0.8rem; color:var(--muted);">
+        💡 <span style="color:#fff;">actual</span> = real outcome | <span style="color:#fff;">predicted</span> = AI output | 1 = positive, 0 = negative
+      </p>
+    </div>
+
+    {% else %}
+    <div class="step-label">Step 2 — Configure Columns</div>
+    
+    <form method="POST" action="/model/results">
+      <div class="col-select-group">
+        <label class="col-select-label">✅ Actual outcome column <span style="color:var(--muted); font-size:0.8rem;">(real result)</span>:</label>
+        <select name="actual_col" class="col-select">
+          {% for col in columns %}
+          <option value="{{ col }}">{{ col }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-select-group">
+        <label class="col-select-label">🤖 Predicted outcome column <span style="color:var(--muted); font-size:0.8rem;">(AI result)</span>:</label>
+        <select name="predicted_col" class="col-select">
+          {% for col in columns %}
+          <option value="{{ col }}">{{ col }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-select-group">
+        <label class="col-select-label">👥 Demographics to analyze:</label>
+        <p style="font-size:0.8rem; color:var(--coral); margin-bottom:12px;">
+          ⚠️ Do not select actual or predicted here.
+        </p>
+        <div class="checkbox-grid">
+          {% for col in columns %}
+          <label class="checkbox-card">
+            <input type="checkbox" name="group_cols" value="{{ col }}">
+            <span>{{ col }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <button type="submit" class="btn-primary" style="margin-top: 1rem;">Detect Model Bias →</button>
+    </form>
+    {% endif %}
+
+    <div class="center">
+      <a href="/" class="back-link">← Back to Home</a>
+    </div>
+  </div>
+</div>
+
+<script>
+  const fi = document.getElementById('fileInput');
+  if(fi) {
+    fi.addEventListener('change', function() {
+      document.getElementById('fileName').textContent = this.files[0].name;
+    });
+  }
+
+  // Starfield
+  const canvas = document.getElementById('stars');
+  const ctx = canvas.getContext('2d');
+  let stars = [];
+
+  function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+  function initStars(n = 100) {
+    stars = Array.from({length: n}, () => ({
+      x: Math.random() * canvas.width, y: Math.random() * canvas.height,
+      r: Math.random() * 1.2 + 0.2, alpha: Math.random() * 0.7 + 0.1,
+      speed: Math.random() * 0.3 + 0.05, twinkleSpeed: Math.random() * 0.02 + 0.005,
+      twinkleDir: Math.random() > 0.5 ? 1 : -1
+    }));
+  }
+  function drawStars() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    stars.forEach(s => {
+      s.alpha += s.twinkleSpeed * s.twinkleDir;
+      if (s.alpha > 0.9 || s.alpha < 0.05) s.twinkleDir *= -1;
+      s.y -= s.speed;
+      if (s.y < 0) { s.y = canvas.height; s.x = Math.random() * canvas.width; }
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(180,200,255,${s.alpha})`; ctx.fill();
+    });
+    requestAnimationFrame(drawStars);
+  }
+  resize(); initStars(); drawStars();
+  window.addEventListener('resize', () => { resize(); initStars(); });
+</script>
+</body>
+</html>
