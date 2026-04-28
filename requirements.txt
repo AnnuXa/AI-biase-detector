@@ -5,3 +5,4 @@ scipy
 reportlab
 google-generativeai
 python-dotenv
+gunicorn
