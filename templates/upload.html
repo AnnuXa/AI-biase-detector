@@ -27,13 +27,11 @@
     overflow-x: hidden;
   }
 
-  /* Backgrounds */
   #stars { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
   .orb { position: fixed; border-radius: 50%; filter: blur(80px); opacity: 0.12; pointer-events: none; z-index: 0; }
   .orb-1 { width: 500px; height: 500px; background: var(--accent); top: -100px; left: -100px; }
   .orb-2 { width: 400px; height: 400px; background: var(--teal); bottom: -80px; right: -80px; }
 
-  /* Layout */
   .page-container {
     position: relative;
     z-index: 10;
@@ -64,7 +62,7 @@
     margin-bottom: 0.5rem;
     color: #fff;
   }
-  
+
   .subtitle {
     color: var(--muted);
     margin-bottom: 2rem;
@@ -74,7 +72,7 @@
   /* Domain Cards */
   .domain-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
     gap: 1rem;
     margin-bottom: 2.5rem;
   }
@@ -84,40 +82,108 @@
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 14px;
     padding: 1.5rem;
-    cursor: pointer;
     transition: all 0.2s ease;
+    position: relative;
   }
 
-  .domain-card.active {
-    background: rgba(108, 99, 255, 0.1);
+  /* Active/available card */
+  .domain-card.available {
+    cursor: pointer;
+  }
+  .domain-card.available:hover {
+    background: rgba(108, 99, 255, 0.08);
+    border-color: rgba(108, 99, 255, 0.4);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(108, 99, 255, 0.15);
+  }
+  .domain-card.selected {
+    background: rgba(108, 99, 255, 0.12);
     border-color: var(--accent);
-    box-shadow: 0 0 20px rgba(108, 99, 255, 0.2);
+    box-shadow: 0 0 24px rgba(108, 99, 255, 0.25);
+  }
+
+  /* Coming soon card */
+  .domain-card.coming-soon {
+    opacity: 0.45;
+    cursor: not-allowed;
+    filter: grayscale(0.3);
+  }
+
+  .coming-soon-badge {
+    display: inline-block;
+    margin-top: 0.6rem;
+    background: rgba(251, 191, 36, 0.15);
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    color: var(--amber);
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .active-badge {
+    display: inline-block;
+    margin-top: 0.6rem;
+    background: rgba(45, 212, 191, 0.15);
+    border: 1px solid rgba(45, 212, 191, 0.3);
+    color: var(--teal);
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
   }
 
   .domain-icon { font-size: 2rem; margin-bottom: 0.5rem; }
-  .domain-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.1rem; margin-bottom: 0.25rem; }
-  .domain-desc { font-size: 0.8rem; color: var(--muted); }
+  .domain-name {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+    color: #fff;
+  }
+  .domain-desc { font-size: 0.78rem; color: var(--muted); }
 
-  /* Upload Box */
+  /* Upload section */
+  #upload-section { display: none; }
+  #upload-section.visible { display: block; animation: fadeSlide 0.4s ease both; }
+
+  .upload-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 1.5rem;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+  .upload-divider::before,
+  .upload-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(255,255,255,0.08);
+  }
+
   .upload-box {
     background: rgba(0, 0, 0, 0.2);
-    border: 2px dashed rgba(148, 163, 184, 0.3);
+    border: 2px dashed rgba(148, 163, 184, 0.25);
     border-radius: 14px;
     padding: 2.5rem;
     cursor: pointer;
     transition: all 0.2s ease;
     margin-bottom: 1.5rem;
   }
-  
   .upload-box:hover {
     border-color: var(--teal);
-    background: rgba(45, 212, 191, 0.05);
+    background: rgba(45, 212, 191, 0.04);
   }
 
   .upload-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
   .file-name { display: block; margin-top: 0.5rem; color: var(--teal); font-size: 0.9rem; }
 
-  /* Buttons */
   .btn-primary {
     display: inline-flex;
     justify-content: center;
@@ -136,7 +202,35 @@
   }
   .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 0 20px rgba(108, 99, 255, 0.4);
+    box-shadow: 0 0 24px rgba(108, 99, 255, 0.4);
+  }
+
+  /* Model bias link */
+  .model-link {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+
+  .btn-outline {
+    display: inline-block;
+    margin-top: 0.75rem;
+    border: 1px solid rgba(108,99,255,0.4);
+    color: var(--accent2);
+    border-radius: 10px;
+    padding: 0.6rem 1.5rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+  .btn-outline:hover {
+    background: rgba(108,99,255,0.12);
+    border-color: var(--accent);
+    color: #fff;
   }
 
   .back-link {
@@ -144,14 +238,20 @@
     margin-top: 1.5rem;
     color: var(--muted);
     text-decoration: none;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     transition: color 0.2s;
   }
   .back-link:hover { color: var(--text); }
 
   @keyframes fadeSlide {
-    from { opacity: 0; transform: translateY(20px); }
-    to   { opacity: 1; transform: translateY(0);    }
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 600px) {
+    .domain-grid { grid-template-columns: 1fr; }
+    .title { font-size: 1.6rem; }
+    .glass-card { padding: 1.5rem; }
   }
 </style>
 </head>
@@ -163,49 +263,81 @@
 
 <div class="page-container">
   <div class="glass-card">
-    <h1 class="title">Dataset Bias Analysis</h1>
-    <p class="subtitle">Select a domain and upload your data to begin.</p>
 
+    <h1 class="title">⚖️ AI Bias Detector</h1>
+    <p class="subtitle">Select your domain to begin detecting bias in your dataset</p>
+
+    <!-- Domain Cards -->
     <div class="domain-grid">
-      <div class="domain-card active" onclick="selectDomain('hiring', this)">
+
+      <!-- Hiring — Active -->
+      <div class="domain-card available" id="card-hiring" onclick="selectDomain('hiring', this)">
         <div class="domain-icon">💼</div>
         <div class="domain-name">Hiring</div>
-        <div class="domain-desc">Recruitment & HR</div>
+        <div class="domain-desc">Recruitment & HR decisions</div>
+        <div class="active-badge">✓ Available</div>
       </div>
-      <div class="domain-card" onclick="selectDomain('finance', this)">
+
+      <!-- Finance — Coming Soon -->
+      <div class="domain-card coming-soon">
         <div class="domain-icon">🏦</div>
         <div class="domain-name">Finance</div>
-        <div class="domain-desc">Loans & Credit</div>
+        <div class="domain-desc">Loans & credit scoring</div>
+        <div class="coming-soon-badge">🔒 Coming Soon</div>
       </div>
-      <div class="domain-card" onclick="selectDomain('healthcare', this)">
+
+      <!-- Healthcare — Coming Soon -->
+      <div class="domain-card coming-soon">
         <div class="domain-icon">🏥</div>
         <div class="domain-name">Healthcare</div>
-        <div class="domain-desc">Medical Decisions</div>
+        <div class="domain-desc">Medical & care decisions</div>
+        <div class="coming-soon-badge">🔒 Coming Soon</div>
       </div>
+
     </div>
 
-    <form method="POST" enctype="multipart/form-data" action="/upload">
-      <input type="hidden" name="domain" id="domain-input" value="hiring">
-      
-      <div class="upload-box" onclick="document.getElementById('fileInput').click()">
-        <div class="upload-icon">📂</div>
-        <p style="color: var(--muted);">Click to upload your CSV file</p>
-        <input type="file" id="fileInput" name="file" accept=".csv" required hidden>
-        <span id="fileName" class="file-name">No file chosen</span>
+    <!-- Upload Section — shown after domain selected -->
+    <div id="upload-section">
+      <div class="upload-divider">
+        <span>Upload your <strong id="domain-label" style="color:#fff;">Hiring</strong> dataset</span>
       </div>
 
-      <button type="submit" class="btn-primary">Analyze Dataset →</button>
-    </form>
+      <form method="POST" enctype="multipart/form-data" action="/upload">
+        <input type="hidden" name="domain" id="domain-input" value="hiring">
 
-    <a href="/" class="back-link">← Back to Home</a>
+        <div class="upload-box" onclick="document.getElementById('fileInput').click()">
+          <div class="upload-icon">📂</div>
+          <p style="color: var(--muted); font-size: 0.9rem;">Click to upload your CSV file</p>
+          <input type="file" id="fileInput" name="file" accept=".csv" required hidden>
+          <span id="fileName" class="file-name">No file chosen</span>
+        </div>
+
+        <button type="submit" class="btn-primary">Analyze Dataset →</button>
+      </form>
+    </div>
+
+    <!-- Model Bias Link -->
+    <div class="model-link">
+      <p>Already have model predictions?</p>
+      <a href="/model" class="btn-outline">🤖 Check Model Bias →</a>
+    </div>
+
   </div>
 </div>
 
 <script>
+  // Auto-show upload on load (Hiring is default selected)
+  window.addEventListener('load', () => {
+    document.getElementById('card-hiring').classList.add('selected');
+    document.getElementById('upload-section').classList.add('visible');
+  });
+
   function selectDomain(domain, element) {
-    document.querySelectorAll('.domain-card').forEach(el => el.classList.remove('active'));
-    element.classList.add('active');
+    document.querySelectorAll('.domain-card.available').forEach(el => el.classList.remove('selected'));
+    element.classList.add('selected');
     document.getElementById('domain-input').value = domain;
+    document.getElementById('domain-label').textContent = domain.charAt(0).toUpperCase() + domain.slice(1);
+    document.getElementById('upload-section').classList.add('visible');
   }
 
   document.getElementById('fileInput').addEventListener('change', function() {
@@ -218,11 +350,14 @@
   let stars = [];
 
   function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-  function initStars(n = 100) {
+  function initStars(n = 120) {
     stars = Array.from({length: n}, () => ({
-      x: Math.random() * canvas.width, y: Math.random() * canvas.height,
-      r: Math.random() * 1.2 + 0.2, alpha: Math.random() * 0.7 + 0.1,
-      speed: Math.random() * 0.3 + 0.05, twinkleSpeed: Math.random() * 0.02 + 0.005,
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      r: Math.random() * 1.2 + 0.2,
+      alpha: Math.random() * 0.7 + 0.1,
+      speed: Math.random() * 0.3 + 0.05,
+      twinkleSpeed: Math.random() * 0.02 + 0.005,
       twinkleDir: Math.random() > 0.5 ? 1 : -1
     }));
   }
@@ -233,8 +368,10 @@
       if (s.alpha > 0.9 || s.alpha < 0.05) s.twinkleDir *= -1;
       s.y -= s.speed;
       if (s.y < 0) { s.y = canvas.height; s.x = Math.random() * canvas.width; }
-      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(180,200,255,${s.alpha})`; ctx.fill();
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(180,200,255,${s.alpha})`;
+      ctx.fill();
     });
     requestAnimationFrame(drawStars);
   }
